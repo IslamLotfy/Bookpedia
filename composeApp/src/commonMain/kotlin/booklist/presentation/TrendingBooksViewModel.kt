@@ -71,7 +71,7 @@ class TrendingBooksViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { 
-                    it.copy(todayBooks = DataState.Error(AppError.Exception(e)))
+                    it.copy(todayBooks = DataState.Error(AppError.Exception(e.message?:"en error occured")))
                 }
             }
         }
@@ -86,7 +86,7 @@ class TrendingBooksViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { 
-                    it.copy(weeklyBooks = DataState.Error(AppError.Exception(e)))
+                    it.copy(weeklyBooks = DataState.Error(AppError.Exception(e.message?:"en error occured")))
                 }
             }
         }
@@ -101,7 +101,7 @@ class TrendingBooksViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { 
-                    it.copy(monthlyBooks = DataState.Error(AppError.Exception(e)))
+                    it.copy(monthlyBooks = DataState.Error(AppError.Exception(e.message ?: "An error occured")))
                 }
             }
         }
@@ -116,7 +116,7 @@ class TrendingBooksViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { 
-                    it.copy(yearlyBooks = DataState.Error(AppError.Exception(e)))
+                    it.copy(yearlyBooks = DataState.Error(AppError.Exception(e.message ?: "An error occured")))
                 }
             }
         }

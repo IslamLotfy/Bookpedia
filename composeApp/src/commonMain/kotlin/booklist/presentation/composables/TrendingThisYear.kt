@@ -23,8 +23,8 @@ import core.domain.DataState
 @Composable
 fun TrendingThisYearContent(viewModel: TrendingBooksViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    BookGrid(
-        state = uiState.yearlyBooks,
-        onRetry = { viewModel.retryYearlyBooks() }
-    )
+//    BookGrid(
+//        state = uiState.yearlyBooks,
+//        onRetry = { viewModel.retryYearlyBooks() }
+//    )
 }

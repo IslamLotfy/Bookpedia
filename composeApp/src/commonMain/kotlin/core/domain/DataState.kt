@@ -13,22 +13,16 @@ sealed class DataState<out T> {
     data class Error(val error : AppError) : DataState<Nothing>()
 }
 
-sealed class AppError {
+sealed class AppError(open val errorMessage:String) {
 
     // 400 response code due to some business rules violation
-    data class Business(val errorTag: ErrorTag) : AppError()
+    data class Business(override val errorMessage:String) : AppError(errorMessage)
 
     // Any other error returned but the server
-    data object Server : AppError()
+    data class Server(override val errorMessage:String) : AppError(errorMessage)
 
     // Some edge cases from frontend handling
-    data object Frontend : AppError()
+    data class Frontend(override val errorMessage:String) : AppError(errorMessage)
 
-    data class Exception(val exception: Throwable) : AppError()
-}
-
-enum class ErrorTag {
-    DIFFERENT_ESTIMATED_COST_ERROR,
-    REQUIRED_FIELD_ERROR,
-    GENERIC
+    data class Exception(override val errorMessage:String) : AppError(errorMessage)
 }
