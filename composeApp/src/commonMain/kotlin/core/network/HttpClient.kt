@@ -26,7 +26,7 @@ class BookpediaHttpClient(private val clientEngine: HttpClientEngine){
             }
 
             install(HttpTimeout){
-                requestTimeoutMillis = 60_000
+                requestTimeoutMillis = 660_000
             }
 
             install(Logging){
