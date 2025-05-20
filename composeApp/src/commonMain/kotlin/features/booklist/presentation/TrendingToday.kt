@@ -4,9 +4,6 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
@@ -14,7 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import features.booklist.domain.model.Book
+import core.domain.DataState
+import features.booklist.presentation.composables.BookDetails
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -22,12 +20,11 @@ fun TrendingToday(
     viewModel: BookListViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedBook by remember { mutableStateOf<Book?>(null) }
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedContent(
-            targetState = selectedBook,
+            targetState = state.selectedBook,
             transitionSpec = {
                 (slideInHorizontally { fullWidth -> fullWidth } + fadeIn() with
                         slideOutHorizontally { fullWidth -> -fullWidth } + fadeOut())
@@ -37,7 +34,7 @@ fun TrendingToday(
             if (targetBook != null) {
                 BookDetails(
                     book = targetBook,
-                    onBackPressed = { selectedBook = null },
+                    onBackPressed = viewModel::onClearSelectedBook,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
@@ -71,10 +68,8 @@ fun TrendingToday(
                             elevation = 1.dp
                         ) {
                             TrendingTabs(
-                                selectedCategory = uiState.trendingBooks.selectedCategory,
-                                selectedTimeRange = uiState.trendingBooks.selectedTimeRange,
-                                onCategorySelected = viewModel::updateCategory,
-                                onTimeRangeSelected = viewModel::updateTimeRange,
+                                selectedCategory = state.selectedCategory,
+                                onCategorySelected = viewModel::onCategorySelected,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -82,10 +77,13 @@ fun TrendingToday(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         BookGrid(
-                            state = uiState.trendingBooks.books,
-                            onBookSelected = { book -> selectedBook = book },
-                            onRetry = viewModel::refresh,
-                            onRefresh = viewModel::refresh,
+                            books = state.books,
+                            isLoading = state.isLoading,
+                            isLoadingMore = state.isLoadingMore,
+                            error = state.error,
+                            onBookSelected = viewModel::onBookSelected,
+                            onRefresh = { viewModel.fetchTrendingBooks(reset = true) },
+                            onLoadMore = viewModel::loadMoreTrendingBooks,
                             modifier = Modifier.fillMaxSize()
                         )
                     }

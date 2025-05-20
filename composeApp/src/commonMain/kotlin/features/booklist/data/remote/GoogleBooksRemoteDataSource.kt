@@ -4,6 +4,12 @@ import features.booklist.data.model.GoogleBooksResponse
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.isSuccess
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import io.ktor.utils.io.errors.IOException
 
 enum class TrendingCategory(val query: String) {
     FICTION("subject:fiction"),
@@ -16,50 +22,83 @@ enum class TrendingCategory(val query: String) {
     BIOGRAPHY("subject:biography+autobiography")
 }
 
-enum class TrendingTimeRange(val maxResults: Int, val orderBy: String) {
-    THIS_WEEK(20, "newest"),
-    THIS_MONTH(30, "newest"),
-    THIS_YEAR(40, "relevance")
-}
-
 class GoogleBooksRemoteDataSource(
     private val httpClient: GoogleBooksHttpClient
 ) {
-    suspend fun searchBooks(query: String, maxResults: Int = 40): GoogleBooksResponse {
-        return httpClient.client.get("volumes") {
-            parameter("q", query)
-            parameter("maxResults", maxResults)
-            parameter("key", GoogleBooksHttpClient.API_KEY)
-        }.body()
+    suspend fun searchBooks(
+        query: String, 
+        maxResults: Int = 20,
+        startIndex: Int = 0
+    ): GoogleBooksResponse {
+        return withContext(Dispatchers.Default) {
+            try {
+                val response = httpClient.client.get("volumes") {
+                    parameter("q", query)
+                    parameter("maxResults", maxResults)
+                    parameter("startIndex", startIndex)
+                    // Access API key via the getter method
+                    parameter("key", GoogleBooksHttpClient.API_KEY)
+                    // Explicitly request all fields we need
+                    parameter("fields", "kind,totalItems,items(id,volumeInfo,saleInfo,accessInfo,searchInfo)")
+                }
+                
+                checkResponse(response)
+            } catch (e: Exception) {
+                handleException(e, "searchBooks")
+            }
+        }
     }
 
     suspend fun getTrendingBooks(
         category: TrendingCategory = TrendingCategory.FICTION,
-        timeRange: TrendingTimeRange = TrendingTimeRange.THIS_MONTH
+        maxResults: Int = 20,
+        startIndex: Int = 0
     ): GoogleBooksResponse {
-        return httpClient.client.get("volumes") {
-            parameter("q", category.query)
-            parameter("orderBy", timeRange.orderBy)
-            parameter("maxResults", timeRange.maxResults)
-            // Add date filter based on timeRange
-            when (timeRange) {
-                TrendingTimeRange.THIS_WEEK -> {
-                    parameter("filter", "partial") // Only books with preview available
+        return withContext(Dispatchers.Default) {
+            try {
+                val response = httpClient.client.get("volumes") {
+                    parameter("q", category.query)
+                    parameter("orderBy", "relevance") // Fixed to relevance (previously THIS_MONTH)
+                    parameter("maxResults", maxResults)
+                    parameter("startIndex", startIndex)
+                    // Explicitly request all fields we need
+                    parameter("fields", "kind,totalItems,items(id,volumeInfo,saleInfo,accessInfo,searchInfo)")
+                    
+                    // Standard filters
+                    parameter("filter", "ebooks") // Only eBooks
                     parameter("langRestrict", "en") // English books only
                     parameter("printType", "books") // Only books, no magazines
-                    parameter("download", "epub") // Only books available as eBooks
+                    
+                    // Access API key via the getter method
+                    parameter("key", GoogleBooksHttpClient.API_KEY)
                 }
-                TrendingTimeRange.THIS_MONTH -> {
-                    parameter("filter", "ebooks") // Only eBooks
-                    parameter("langRestrict", "en")
-                    parameter("printType", "books")
-                }
-                TrendingTimeRange.THIS_YEAR -> {
-                    parameter("langRestrict", "en")
-                    parameter("printType", "books")
-                }
+
+                checkResponse(response)
+            } catch (e: Exception) {
+                handleException(e, "getTrendingBooks")
             }
-            parameter("key", GoogleBooksHttpClient.API_KEY)
-        }.body()
+        }
+    }
+    
+    private suspend fun checkResponse(response: HttpResponse): GoogleBooksResponse {
+        if (response.status.isSuccess()) {
+            try {
+                return response.body()
+            } catch (e: Exception) {
+                val responseText = response.bodyAsText()
+                println("Response parsing error. Raw response: $responseText")
+                throw Exception("Failed to parse response: ${e.message}")
+            }
+        } else {
+            val errorBody = response.bodyAsText()
+            println("API Error (Status ${response.status.value}): $errorBody")
+            throw IOException("API Error: ${response.status.value} - $errorBody")
+        }
+    }
+    
+    private fun handleException(e: Exception, method: String): Nothing {
+        val errorMsg = e.message ?: "Unknown error"
+        println("Error in $method: $errorMsg")
+        throw e
     }
 } 

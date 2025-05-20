@@ -3,7 +3,6 @@ package features.booklist.data.repository
 import features.booklist.data.mapper.toDomainModel
 import features.booklist.data.remote.GoogleBooksRemoteDataSource
 import features.booklist.data.remote.TrendingCategory
-import features.booklist.data.remote.TrendingTimeRange
 import features.booklist.domain.model.Book
 import features.booklist.domain.repository.BooksRepository
 import io.ktor.client.plugins.ClientRequestException
@@ -21,12 +20,23 @@ class BooksRepositoryImpl(
 
     override fun getTrendingBooks(
         category: TrendingCategory,
-        timeRange: TrendingTimeRange
+        page: Int,
+        pageSize: Int
     ): Flow<DataState<List<Book>>> = flow {
         emit(DataState.Loading)
         try {
-            val response = remoteDataSource.getTrendingBooks(category, timeRange)
-            emit(DataState.Success(response.toDomainModel()))
+            // Convert page to startIndex (0-based pagination)
+            val startIndex = page * pageSize
+            
+            val response = remoteDataSource.getTrendingBooks(
+                category = category,
+                maxResults = pageSize,
+                startIndex = startIndex
+            )
+            
+            // Handle empty items array gracefully
+            val books = response.items?.map { it.toDomainModel() } ?: emptyList()
+            emit(DataState.Success(books))
         } catch (e: HttpRequestTimeoutException) {
             emit(DataState.Error(AppError.Exception("Request timed out. Please check your internet connection.")))
         } catch (e: ClientRequestException) {
@@ -38,11 +48,25 @@ class BooksRepositoryImpl(
         }
     }
 
-    override fun searchBooks(query: String): Flow<DataState<List<Book>>> = flow {
+    override fun searchBooks(
+        query: String,
+        page: Int,
+        pageSize: Int
+    ): Flow<DataState<List<Book>>> = flow {
         emit(DataState.Loading)
         try {
-            val response = remoteDataSource.searchBooks(query)
-            emit(DataState.Success(response.toDomainModel()))
+            // Convert page to startIndex (0-based pagination)
+            val startIndex = page * pageSize
+            
+            val response = remoteDataSource.searchBooks(
+                query = query,
+                maxResults = pageSize,
+                startIndex = startIndex
+            )
+            
+            // Handle empty items array gracefully
+            val books = response.items?.map { it.toDomainModel() } ?: emptyList()
+            emit(DataState.Success(books))
         } catch (e: HttpRequestTimeoutException) {
             emit(DataState.Error(AppError.Exception("Request timed out. Please check your internet connection.")))
         } catch (e: ClientRequestException) {

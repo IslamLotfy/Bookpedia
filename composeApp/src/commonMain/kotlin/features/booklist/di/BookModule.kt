@@ -19,12 +19,6 @@ val bookModule = module {
     // Use Cases
     factoryOf(::GetTrendingBooksUseCase)
     factoryOf(::SearchBooksUseCase)
-    factory {
-        BookUseCases(
-            getTrendingBooks = get(),
-            searchBooks = get()
-        )
-    }
 
     // View Model
     factoryOf(::BookListViewModel)

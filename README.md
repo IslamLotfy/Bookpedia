@@ -162,3 +162,89 @@ We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public S
 If you face any issues, please report them on [GitHub](https://github.com/JetBrains/compose-multiplatform/issues).
 
 You can open the web application by running the `:composeApp:wasmJsBrowserDevelopmentRun` Gradle task.
+
+# Bookpedia
+
+A cross-platform book discovery application built with Kotlin Multiplatform and Compose Multiplatform.
+
+## Features
+
+- Browse trending books in various categories
+- Search for books by title, author, or keywords
+- View detailed book information
+- Material Design UI with smooth animations
+- Cross-platform (Android, iOS, Desktop, Web)
+
+## Architecture
+
+The application follows Clean Architecture principles with the following layers:
+
+- **Presentation**: UI components built with Compose Multiplatform
+- **Domain**: Business logic and use cases
+- **Data**: Repository implementation and data sources
+
+## Tech Stack
+
+- **Kotlin Multiplatform**: For sharing code across platforms
+- **Compose Multiplatform**: For UI development
+- **Koin**: For dependency injection
+- **Ktor**: For networking
+- **Kotlinx Serialization**: For JSON parsing
+- **Coil**: For image loading
+- **Google Books API**: For book data
+
+## Getting Started
+
+### Prerequisites
+
+- Android Studio Arctic Fox or later
+- Kotlin 1.8.0 or later
+- Google Books API key
+
+### Setup
+
+1. Clone the repository
+2. Open the project in Android Studio
+3. Add your Google Books API key in `GoogleBooksHttpClient.kt`
+4. Build and run the application
+
+### Running on Different Platforms
+
+#### Android
+
+```
+./gradlew :composeApp:assembleDebug
+```
+
+#### Desktop
+
+```
+./gradlew :composeApp:run
+```
+
+#### iOS
+
+Open the Xcode project in the `iosApp` directory and run it.
+
+#### Web
+
+```
+./gradlew :composeApp:wasmJsBrowserDevelopmentRun
+```
+
+## Project Structure
+
+- `composeApp/`: Main module containing shared code
+  - `src/commonMain/`: Code shared across all platforms
+    - `kotlin/`: Kotlin source files
+      - `core/`: Core functionality
+      - `features/`: Feature modules
+      - `di/`: Dependency injection setup
+  - `src/androidMain/`: Android-specific code
+  - `src/iosMain/`: iOS-specific code
+  - `src/desktopMain/`: Desktop-specific code
+  - `src/wasmJsMain/`: Web-specific code
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

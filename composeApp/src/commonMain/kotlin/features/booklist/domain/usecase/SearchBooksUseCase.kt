@@ -8,7 +8,15 @@ import kotlinx.coroutines.flow.Flow
 class SearchBooksUseCase(
     private val repository: BooksRepository
 ) {
-    operator fun invoke(query: String): Flow<DataState<List<Book>>> {
-        return repository.searchBooks(query)
+    operator fun invoke(
+        query: String,
+        page: Int = 0,
+        pageSize: Int = 20
+    ): Flow<DataState<List<Book>>> {
+        return repository.searchBooks(
+            query = query,
+            page = page,
+            pageSize = pageSize
+        )
     }
 } 

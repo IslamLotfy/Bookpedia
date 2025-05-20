@@ -115,7 +115,7 @@ fun BookDetails(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Authors
-                if (book.authors.isNotEmpty()) {
+                if (book.author.isNotEmpty() && book.author.split(",").size > 1) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
@@ -129,7 +129,7 @@ fun BookDetails(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = book.authors.joinToString(", "),
+                            text = book.author,
                             style = MaterialTheme.typography.h6.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -141,7 +141,7 @@ fun BookDetails(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Publish Date
-                if (book.publishDate.isNotEmpty()) {
+                if (book.publishedDate.isNotEmpty()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
@@ -155,7 +155,7 @@ fun BookDetails(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Published: ${book.publishDate}",
+                            text = "Published: ${book.publishedDate}",
                             style = MaterialTheme.typography.subtitle1.copy(
                                 fontWeight = FontWeight.Medium
                             ),

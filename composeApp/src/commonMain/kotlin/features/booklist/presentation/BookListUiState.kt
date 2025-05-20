@@ -2,7 +2,6 @@ package features.booklist.presentation
 
 import core.domain.DataState
 import features.booklist.data.remote.TrendingCategory
-import features.booklist.data.remote.TrendingTimeRange
 import features.booklist.domain.model.Book
 
 data class BookListUiState(
@@ -14,5 +13,4 @@ data class BookListUiState(
 data class TrendingBookUiState(
     val books: DataState<List<Book>> = DataState.Loading,
     val selectedCategory: TrendingCategory = TrendingCategory.FICTION,
-    val selectedTimeRange: TrendingTimeRange = TrendingTimeRange.THIS_MONTH
 )
