@@ -1,4 +1,4 @@
-package booklist.presentation.composables
+package features.booklist.presentation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*

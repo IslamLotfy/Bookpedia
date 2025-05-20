@@ -14,9 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import booklist.presentation.composables.BookGrid
 import features.booklist.domain.model.Book
-import features.booklist.presentation.BookListViewModel
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
