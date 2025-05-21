@@ -6,6 +6,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+// Define the Playfair Display font family
+val PlayfairDisplayFamily = FontFamily.Default // We'll use default as a fallback for now
+// In a real project, we would load the actual font files
+
 val Typography = Typography(
     h1 = TextStyle(
         fontWeight = FontWeight.ExtraBold,

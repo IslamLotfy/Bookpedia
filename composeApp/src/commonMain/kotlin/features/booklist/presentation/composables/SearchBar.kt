@@ -42,6 +42,17 @@ fun SearchBar(
     
     LaunchedEffect(query) {
         searchText = query
+        // Automatically expand the search bar if there's a query
+        if (query.isNotEmpty()) {
+            isExpanded = true
+        }
+    }
+
+    // Auto-search effect when query exceeds 4 characters
+    LaunchedEffect(searchText) {
+        if (searchText.length >= 4) {
+            onSearch(searchText)
+        }
     }
 
     Surface(
@@ -53,7 +64,9 @@ fun SearchBar(
         color = MaterialTheme.colors.surface
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -75,7 +88,7 @@ fun SearchBar(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                    tint = MaterialTheme.colors.primary
                 )
             }
 
@@ -125,18 +138,21 @@ fun SearchBar(
                         )
                     )
 
-                    if (searchText.isNotEmpty()) {
-                        IconButton(onClick = {
+                    // X button is always visible when search bar is expanded
+                    IconButton(
+                        onClick = {
                             searchText = ""
                             onQueryChange("")
                             onClearSearch()
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear search",
-                                tint = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
-                            )
+                            // Keep the search bar expanded
+                            focusRequester.requestFocus()
                         }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear search",
+                            tint = MaterialTheme.colors.primary
+                        )
                     }
                 }
             }

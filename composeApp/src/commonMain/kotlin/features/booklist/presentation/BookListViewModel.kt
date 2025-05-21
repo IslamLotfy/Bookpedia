@@ -6,16 +6,14 @@ import core.domain.AppError
 import core.domain.DataState
 import features.booklist.data.remote.TrendingCategory
 import features.booklist.domain.model.Book
-import features.booklist.domain.usecase.GetTrendingBooksUseCase
-import features.booklist.domain.usecase.SearchBooksUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import features.booklist.domain.usecase.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class BookListViewModel(private val getTrendingBooksUseCase: GetTrendingBooksUseCase,
-    private val searchBooksUseCase: SearchBooksUseCase) : ViewModel() {
+class BookListViewModel(
+    private val getTrendingBooksUseCase: GetTrendingBooksUseCase,
+    private val searchBooksUseCase: SearchBooksUseCase
+) : ViewModel() {
 
     private val _state = MutableStateFlow(BookListState())
     val state: StateFlow<BookListState> = _state.asStateFlow()
@@ -26,6 +24,8 @@ class BookListViewModel(private val getTrendingBooksUseCase: GetTrendingBooksUse
     private var isLoadingMoreSearch = false
     private var hasMoreTrendingItems = true
     private var hasMoreSearchItems = true
+
+    // No favorite book tracking
 
     init {
         fetchTrendingBooks()
@@ -208,6 +208,10 @@ class BookListViewModel(private val getTrendingBooksUseCase: GetTrendingBooksUse
         }
     }
 
+    fun updateSearchQuery(query: String) {
+        _state.update { it.copy(searchQuery = query) }
+    }
+
     fun clearSearch() {
         _state.update { it.copy(
             searchResults = emptyList(),
@@ -228,8 +232,12 @@ class BookListViewModel(private val getTrendingBooksUseCase: GetTrendingBooksUse
     }
 
     fun onClearSelectedBook() {
+        println("DEBUG: onClearSelectedBook called, current selectedBook: ${_state.value.selectedBook?.title}")
         _state.update { it.copy(selectedBook = null) }
+        println("DEBUG: selectedBook set to null")
     }
+
+    // Favorite book methods removed
 
     data class BookListState(
         val isLoading: Boolean = false,

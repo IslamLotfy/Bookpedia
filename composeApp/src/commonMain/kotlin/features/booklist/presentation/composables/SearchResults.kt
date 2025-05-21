@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import core.domain.AppError
 import features.booklist.domain.model.Book
+import features.booklist.presentation.BookListViewModel
+import features.booklist.presentation.ErrorContent
+import features.booklist.presentation.BookGridItem
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -31,115 +35,66 @@ fun SearchResults(
     error: AppError?,
     onBookClicked: (Book) -> Unit,
     onLoadMore: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
-    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
 
-    // Detect when we need to load more items
-    val loadMore = remember {
-        derivedStateOf {
-            val layoutInfo = listState.layoutInfo
-            val totalItems = layoutInfo.totalItemsCount
-            val lastVisibleItemIndex = (layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) + 1
 
-            // Load more when we reach the last 4 items
-            lastVisibleItemIndex > (totalItems - 4)
-        }
-    }
-
-    LaunchedEffect(loadMore.value) {
-        if (loadMore.value && !isLoading && books.isNotEmpty()) {
+    LaunchedEffect(gridState.canScrollForward) {
+        if (!gridState.canScrollForward && !isLoading && books.isNotEmpty()) {
             onLoadMore()
         }
     }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .background(MaterialTheme.colors.surface)
+        modifier = modifier,
+        contentAlignment = Alignment.Center
     ) {
-        AnimatedContent(
-            targetState = Triple(books.isEmpty(), isLoading, error),
-            transitionSpec = {
-                fadeIn() with fadeOut()
+        when {
+            isLoading && books.isEmpty() -> {
+                CircularProgressIndicator(color = MaterialTheme.colors.primary)
             }
-        ) { (isEmpty, isLoading, error) ->
-            when {
-                isLoading && isEmpty -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colors.primary)
-                    }
-                }
-                error != null && isEmpty -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = "Error",
-                            tint = MaterialTheme.colors.error,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = when (error) {
-                                is AppError.Exception -> "An error occurred: ${error.errorMessage}"
-                                is AppError.Business -> error.errorMessage
-                                is AppError.Server -> "Server error, please try again later"
-                                is AppError.Frontend -> "Application error, please try again"
-                            },
-                            style = MaterialTheme.typography.body1,
-                            color = MaterialTheme.colors.onSurface
+            error != null && books.isEmpty() -> {
+                ErrorContent(error = error, onRetry = onLoadMore, modifier = Modifier.fillMaxSize())
+            }
+            books.isEmpty() -> {
+                Text(
+                    text = "No results found",
+                    style = MaterialTheme.typography.h6,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                )
+            }
+            else -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    state = gridState,
+                    contentPadding = PaddingValues(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        items = books,
+                        key = { it.id }
+                    ) { book ->
+                        BookGridItem(
+                            book = book,
+                            onClick = { onBookClicked(book) }
                         )
                     }
-                }
-                isEmpty -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No results found",
-                            style = MaterialTheme.typography.h6,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
-                        )
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(books, key = { it.id }) { book ->
-                            SearchResultItem(
-                                book = book,
-                                onClick = { onBookClicked(book) }
-                            )
-                        }
 
-                        if (isLoading && books.isNotEmpty()) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(32.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                }
+                    if (isLoading) {
+                        item(span = { GridItemSpan(2) }) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 2.dp
+                                )
                             }
                         }
                     }

@@ -22,4 +22,4 @@ val bookModule = module {
 
     // View Model
     factoryOf(::BookListViewModel)
-} 
+}

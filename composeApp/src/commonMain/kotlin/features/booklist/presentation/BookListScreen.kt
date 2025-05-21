@@ -1,18 +1,20 @@
 package features.booklist.presentation
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,9 +43,13 @@ fun BookListScreen(
             }
         ) { selectedBook ->
             if (selectedBook != null) {
+                println("DEBUG: Showing BookDetails for book: ${selectedBook.title}")
                 BookDetails(
                     book = selectedBook,
-                    onBackPressed = viewModel::onClearSelectedBook,
+                    onBackPressed = {
+                        println("DEBUG: onBackPressed callback triggered from BookListScreen")
+                        viewModel.onClearSelectedBook()
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
@@ -59,7 +65,8 @@ fun BookListScreen(
                                 )
                             },
                             backgroundColor = MaterialTheme.colors.surface,
-                            elevation = 4.dp
+                            elevation = 4.dp,
+                            // No actions
                         )
                     },
                     modifier = Modifier.windowInsetsPadding(
@@ -71,56 +78,60 @@ fun BookListScreen(
                             .fillMaxSize()
                             .padding(paddingValues)
                     ) {
-                        SearchBar(
-                            query = state.searchQuery,
-                            onQueryChange = { query ->
-                                if (query.isEmpty()) {
-                                    viewModel.clearSearch()
-                                }
-                            },
-                            onSearch = viewModel::searchBooks,
-                            onClearSearch = viewModel::clearSearch,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        AnimatedVisibility(
-                            visible = state.isSearching,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            SearchResults(
-                                books = state.searchResults,
-                                isLoading = state.isSearchLoading || state.isSearchLoadingMore,
-                                error = state.searchError,
-                                onBookClicked = viewModel::onBookSelected,
-                                onLoadMore = viewModel::loadMoreSearchResults,
-                                modifier = Modifier.fillMaxSize()
+                            SearchBar(
+                                query = state.searchQuery,
+                                onQueryChange = { query ->
+                                    viewModel.updateSearchQuery(query)
+                                    if (query.isEmpty()) {
+                                        viewModel.clearSearch()
+                                    }
+                                },
+                                onSearch = viewModel::searchBooks,
+                                onClearSearch = viewModel::clearSearch,
+                                modifier = Modifier.fillMaxWidth()
                             )
-                        }
 
-                        AnimatedVisibility(
-                            visible = !state.isSearching,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            Column {
-                                TrendingTabs(
-                                    selectedCategory = state.selectedCategory,
-                                    onCategorySelected = viewModel::onCategorySelected,
-                                    modifier = Modifier.fillMaxWidth()
+
+                        // Regular search and browse view
+                            AnimatedVisibility(
+                                visible = state.isSearching,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                SearchResults(
+                                    books = state.searchResults,
+                                    isLoading = state.isSearchLoading || state.isSearchLoadingMore,
+                                    error = state.searchError,
+                                    onBookClicked = viewModel::onBookSelected,
+                                    onLoadMore = viewModel::loadMoreSearchResults,
+                                    modifier = Modifier.fillMaxSize()
                                 )
+                            }
 
-                                Box(modifier = Modifier.weight(1f)) {
-                                    BookGrid(
-                                        books = state.books,
-                                        isLoading = state.isLoading,
-                                        isLoadingMore = state.isLoadingMore,
-                                        error = state.error,
-                                        onBookSelected = viewModel::onBookSelected,
-                                        onRefresh = { viewModel.fetchTrendingBooks(reset = true) },
-                                        onLoadMore = viewModel::loadMoreTrendingBooks,
-                                        modifier = Modifier.fillMaxSize()
+                            AnimatedVisibility(
+                                visible = !state.isSearching,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                Column {
+                                    TrendingTabs(
+                                        selectedCategory = state.selectedCategory,
+                                        onCategorySelected = viewModel::onCategorySelected,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
+
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        BookGrid(
+                                            books = state.books,
+                                            isLoading = state.isLoading,
+                                            isLoadingMore = state.isLoadingMore,
+                                            error = state.error,
+                                            onBookSelected = viewModel::onBookSelected,
+                                            onRefresh = { viewModel.fetchTrendingBooks(reset = true) },
+                                            onLoadMore = viewModel::loadMoreTrendingBooks,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -129,7 +140,9 @@ fun BookListScreen(
             }
         }
     }
-}
+
+
+// FavoritesGrid removed
 
 @Composable
 fun BookGrid(
@@ -344,41 +357,43 @@ fun BookGridItem(
             elevation = 4.dp,
             onClick = onClick
         ) {
-            Column {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    coil3.compose.AsyncImage(
-                        model = book.coverUrl,
-                        contentDescription = "Cover of ${book.title}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                    )
-                }
+            Box {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        coil3.compose.AsyncImage(
+                            model = book.coverUrl,
+                            contentDescription = "Cover of ${book.title}",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = book.title,
-                        style = MaterialTheme.typography.subtitle1,
-                        maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = book.title,
+                            style = MaterialTheme.typography.subtitle1,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
 
-                    Text(
-                        text = book.author,
-                        style = MaterialTheme.typography.caption,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
-                    )
+                        Text(
+                            text = book.author,
+                            style = MaterialTheme.typography.caption,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }

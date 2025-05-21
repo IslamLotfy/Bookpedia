@@ -20,5 +20,6 @@ val dataModule = module {
 
 }
 
-expect val platformModule: Module
+expect fun platformModule(context: Any = Any()): Module
+
 
