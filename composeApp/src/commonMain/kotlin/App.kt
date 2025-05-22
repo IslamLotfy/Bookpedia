@@ -69,7 +69,9 @@ fun App() {
                                         launchSingleTop = true
                                         restoreState = true
                                     }
-                                }
+                                },
+                                selectedContentColor = MaterialTheme.colors.primary,
+                                unselectedContentColor = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
                             )
 
                             val isSelected = currentDestination?.hierarchy?.any { it.route == "favorites" } == true
