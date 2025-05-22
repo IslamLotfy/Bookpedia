@@ -6,13 +6,18 @@ import core.domain.AppError
 import core.domain.DataState
 import features.booklist.data.remote.TrendingCategory
 import features.booklist.domain.model.Book
+import features.booklist.domain.repository.BooksRepository
 import features.booklist.domain.usecase.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class BookListViewModel(
     private val getTrendingBooksUseCase: GetTrendingBooksUseCase,
-    private val searchBooksUseCase: SearchBooksUseCase
+    private val searchBooksUseCase: SearchBooksUseCase,
+    private val getFavoriteBooksUseCase: GetFavoriteBooksUseCase,
+    private val isFavoriteBookUseCase: IsFavoriteBookUseCase,
+    private val toggleFavoriteBookUseCase: ToggleFavoriteBookUseCase,
+    private val getBookByIdUseCase: GetBookByIdUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BookListState())
@@ -25,10 +30,51 @@ class BookListViewModel(
     private var hasMoreTrendingItems = true
     private var hasMoreSearchItems = true
 
-    // No favorite book tracking
+    // Map to store favorite status of books
+    private val _favoriteStatusMap = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    val favoriteStatusMap: StateFlow<Map<String, Boolean>> = _favoriteStatusMap.asStateFlow()
+
+    // Track favorite books
+    private val _favoriteBooks = MutableStateFlow<List<Book>>(emptyList())
+    val favoriteBooks: StateFlow<List<Book>> = _favoriteBooks.asStateFlow()
 
     init {
         fetchTrendingBooks()
+        loadFavoriteBooks()
+    }
+
+    private fun loadFavoriteBooks() {
+        viewModelScope.launch {
+            getFavoriteBooksUseCase().collectLatest { books ->
+                _favoriteBooks.value = books
+                
+                // Update the favorite status map
+                val newMap = _favoriteStatusMap.value.toMutableMap()
+                books.forEach { book ->
+                    newMap[book.id] = true
+                }
+                _favoriteStatusMap.value = newMap
+            }
+        }
+    }
+
+    fun checkFavoriteStatus(bookId: String) {
+        viewModelScope.launch {
+            isFavoriteBookUseCase(bookId).collectLatest { isFavorite ->
+                val newMap = _favoriteStatusMap.value.toMutableMap()
+                newMap[bookId] = isFavorite
+                _favoriteStatusMap.value = newMap
+            }
+        }
+    }
+
+    fun toggleFavorite(book: Book) {
+        viewModelScope.launch {
+            val isFavorite = toggleFavoriteBookUseCase(book)
+            val newMap = _favoriteStatusMap.value.toMutableMap()
+            newMap[book.id] = isFavorite
+            _favoriteStatusMap.value = newMap
+        }
     }
 
     fun fetchTrendingBooks(
@@ -229,6 +275,8 @@ class BookListViewModel(
 
     fun onBookSelected(book: Book) {
         _state.update { it.copy(selectedBook = book) }
+        // Check if the book is a favorite
+        checkFavoriteStatus(book.id)
     }
 
     fun onClearSelectedBook() {
@@ -237,7 +285,43 @@ class BookListViewModel(
         println("DEBUG: selectedBook set to null")
     }
 
-    // Favorite book methods removed
+    fun showFavoriteBooks() {
+        _state.update { it.copy(showingFavorites = true) }
+    }
+
+    fun hideFavoriteBooks() {
+        _state.update { it.copy(showingFavorites = false) }
+    }
+
+    /**
+     * Fetches a book by its ID
+     * This method sets the book as the selected book once fetched
+     */
+    fun fetchBookById(bookId: String) {
+        // If the book is already selected, don't do anything
+        if (state.value.selectedBook?.id == bookId) return
+        
+        // First check if we already have this book in our existing collections
+        val book = state.value.books.find { it.id == bookId }
+            ?: state.value.searchResults.find { it.id == bookId }
+        
+        if (book != null) {
+            _state.update { it.copy(selectedBook = book) }
+            return
+        }
+        
+        // Otherwise, we need to fetch the book from the repository
+        viewModelScope.launch {
+            try {
+                val fetchedBook = getBookByIdUseCase(bookId)
+                _state.update { it.copy(selectedBook = fetchedBook) }
+            } catch (e: Exception) {
+                _state.update { 
+                    it.copy(error = AppError.Exception("Failed to fetch book: ${e.message}"))
+                }
+            }
+        }
+    }
 
     data class BookListState(
         val isLoading: Boolean = false,
@@ -253,7 +337,8 @@ class BookListViewModel(
         val searchResults: List<Book> = emptyList(),
         val searchError: AppError? = null,
 
-        val selectedBook: Book? = null
+        val selectedBook: Book? = null,
+        val showingFavorites: Boolean = false
     )
 
     companion object {

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xsi:schemaLocation="http://schemas.android.com/apk/res/android "
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    android:width="800dp"
+    android:height="800dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- Book/document background -->
+    <path
+        android:fillColor="#8080FF"
+        android:pathData="M40,0 L400,0 Q440,0 440,40 L440,472 Q440,512 400,512 L40,512 Q0,512 0,472 L0,40 Q0,0 40,0 Z" />
+
+    <!-- Document lines -->
+    <path
+        android:fillColor="#6060DD"
+        android:pathData="M160,80 L280,80 L280,110 L160,110 Z" />
+    <path
+        android:fillColor="#6060DD"
+        android:pathData="M160,150 L280,150 L280,180 L160,180 Z" />
+
+    <!-- Star/bookmark circle -->
+    <path
+        android:fillColor="#FF5A5A"
+        android:pathData="M380,240 A120,120 0 1 1 380,480 A120,120 0 1 1 380,240 Z" />
+
+    <!-- Star shape -->
+    <path
+        android:fillColor="#FFEE80"
+        android:pathData="M380,290 L402,350 L465,350 L415,390 L430,450 L380,415 L330,450 L345,390 L295,350 L358,350 Z" />
+</vector>

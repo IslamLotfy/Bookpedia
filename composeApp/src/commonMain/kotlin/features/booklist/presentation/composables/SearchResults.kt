@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -25,7 +26,8 @@ import core.domain.AppError
 import features.booklist.domain.model.Book
 import features.booklist.presentation.BookListViewModel
 import features.booklist.presentation.ErrorContent
-import features.booklist.presentation.BookGridItem
+import features.booklist.presentation.BookGridItemWithFavorite
+import features.booklist.presentation.composables.BookmarkIcon
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -34,11 +36,12 @@ fun SearchResults(
     isLoading: Boolean,
     error: AppError?,
     onBookClicked: (Book) -> Unit,
+    onFavoriteToggle: (Book) -> Unit,
+    favoriteStatusMap: Map<String, Boolean>,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
-
 
     LaunchedEffect(gridState.canScrollForward) {
         if (!gridState.canScrollForward && !isLoading && books.isNotEmpty()) {
@@ -73,13 +76,15 @@ fun SearchResults(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(
+                    itemsIndexed(
                         items = books,
-                        key = { it.id }
-                    ) { book ->
-                        BookGridItem(
+                        key = { index, book -> "${book.id}_search_$index" }
+                    ) { _, book ->
+                        BookGridItemWithFavorite(
                             book = book,
-                            onClick = { onBookClicked(book) }
+                            isFavorite = favoriteStatusMap[book.id] ?: false,
+                            onClick = { onBookClicked(book) },
+                            onFavoriteClick = { onFavoriteToggle(book) }
                         )
                     }
 
@@ -112,7 +117,7 @@ fun SearchResultItem(
 ) {
     var visible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(book) {
+    LaunchedEffect(Unit) {
         visible = true
     }
 

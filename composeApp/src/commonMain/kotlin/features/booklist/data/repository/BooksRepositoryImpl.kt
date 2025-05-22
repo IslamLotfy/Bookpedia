@@ -77,4 +77,14 @@ class BooksRepositoryImpl(
             emit(DataState.Error(AppError.Exception(e.message ?: "Unknown error occurred")))
         }
     }
+    
+    /**
+     * Gets a specific book by its ID
+     * @param bookId The ID of the book to fetch
+     * @return The book if found
+     * @throws Exception if the book could not be fetched
+     */
+    override suspend fun getBookById(bookId: String): Book {
+        return remoteDataSource.getBookById(bookId)
+    }
 }

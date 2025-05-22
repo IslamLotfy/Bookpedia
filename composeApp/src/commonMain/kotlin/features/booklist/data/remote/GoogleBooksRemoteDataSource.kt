@@ -1,6 +1,9 @@
 package features.booklist.data.remote
 
+import features.booklist.data.mapper.toDomainModel
+import features.booklist.data.model.BookItem
 import features.booklist.data.model.GoogleBooksResponse
+import features.booklist.domain.model.Book
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -76,6 +79,31 @@ class GoogleBooksRemoteDataSource(
                 checkResponse(response)
             } catch (e: Exception) {
                 handleException(e, "getTrendingBooks")
+            }
+        }
+    }
+    
+    /**
+     * Fetches a specific book by its ID
+     */
+    suspend fun getBookById(bookId: String): Book {
+        return withContext(Dispatchers.Default) {
+            try {
+                val response = httpClient.client.get("volumes/$bookId") {
+                    // Access API key via the getter method
+                    parameter("key", GoogleBooksHttpClient.API_KEY)
+                }
+                
+                if (response.status.isSuccess()) {
+                    val bookItem = response.body<BookItem>()
+                    bookItem.toDomainModel()
+                } else {
+                    val errorBody = response.bodyAsText()
+                    println("API Error (Status ${response.status.value}): $errorBody")
+                    throw IOException("API Error: ${response.status.value} - $errorBody")
+                }
+            } catch (e: Exception) {
+                handleException(e, "getBookById")
             }
         }
     }

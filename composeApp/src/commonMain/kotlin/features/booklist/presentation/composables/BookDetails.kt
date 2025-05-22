@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.*
+import features.booklist.presentation.composables.BookmarkIcon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -40,10 +41,12 @@ import features.booklist.domain.model.Book
 fun BookDetails(
     book: Book,
     onBackPressed: () -> Unit,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (Book) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isLoading by remember { mutableStateOf(true) }
-    
+
     Box(modifier = modifier.fillMaxSize()) {
         // Background blur image
         AsyncImage(
@@ -69,7 +72,7 @@ fun BookDetails(
                     )
                 )
         )
-        
+
         // Transparent app bar
         TopAppBar(
             title = {
@@ -92,7 +95,15 @@ fun BookDetails(
                     )
                 }
             },
-            // No actions
+            actions = {
+                IconButton(onClick = { onToggleFavorite(book) }) {
+                    BookmarkIcon(
+                        isFavorite = isFavorite,
+                        modifier = Modifier.size(24.dp)
+                    )
+
+                }
+            },
             backgroundColor = Color.Black.copy(alpha = 0.2f),
             elevation = 0.dp,
             modifier = Modifier
@@ -192,9 +203,9 @@ fun BookDetails(
                             )
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     // Reading statistics
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -206,9 +217,9 @@ fun BookDetails(
                             tint = MaterialTheme.colors.primary,
                             modifier = Modifier.size(16.dp)
                         )
-                        
+
                         Spacer(modifier = Modifier.width(8.dp))
-                        
+
                         Text(
                             text = "${book.ratingsCount ?: 0} readings",
                             style = MaterialTheme.typography.caption,
@@ -237,7 +248,7 @@ fun BookDetails(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 // Categories moved above description
                 if (!book.categories.isNullOrEmpty()) {
                     FlowRow(
@@ -252,7 +263,7 @@ fun BookDetails(
                             )
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
@@ -331,7 +342,7 @@ fun FlowRow(
 
             rows.forEach { row ->
                 val rowWidth = row.width - if (row.placeables.isNotEmpty()) mainAxisSpacing.roundToPx() else 0
-                
+
                 // Calculate starting x based on alignment
                 var x = when (mainAxisAlignment) {
                     Alignment.CenterHorizontally -> (constraints.maxWidth - rowWidth) / 2

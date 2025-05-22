@@ -3,146 +3,225 @@ package features.booklist.presentation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import core.domain.AppError
 import features.booklist.domain.model.Book
-import features.booklist.presentation.composables.BookDetails
+import features.booklist.presentation.composables.BookmarkIcon
 import features.booklist.presentation.composables.SearchBar
 import features.booklist.presentation.composables.SearchResults
+
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun BookListScreen(
     viewModel: BookListViewModel,
+    showFavoritesOnly: Boolean = false,
+    onNavigateToDetails: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val favoriteStatusMap by viewModel.favoriteStatusMap.collectAsStateWithLifecycle()
+    val favoriteBooks by viewModel.favoriteBooks.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = state.selectedBook,
-            transitionSpec = {
-                (slideInHorizontally { width -> width } + fadeIn() with
-                        slideOutHorizontally { width -> -width } + fadeOut()).using(
-                    SizeTransform(clip = false)
+    // Set favorites mode based on parameter
+    LaunchedEffect(showFavoritesOnly) {
+        if (showFavoritesOnly) {
+            viewModel.showFavoriteBooks()
+        } else if (state.showingFavorites) {
+            viewModel.hideFavoriteBooks()
+        }
+    }
+
+    // Navigate to details if a book is selected
+    LaunchedEffect(state.selectedBook?.id) {
+        val selectedBook = state.selectedBook
+        if (selectedBook != null) {
+            onNavigateToDetails(selectedBook.id)
+            // Clear the selected book after navigation
+            viewModel.onClearSelectedBook()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = if (state.showingFavorites) "Favorite Books" else "Bookpedia",
+                        style = MaterialTheme.typography.h5.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                },
+                backgroundColor = MaterialTheme.colors.surface,
+                elevation = 4.dp,
+                actions = {
+                    
+                }
+            )
+        },
+        modifier = Modifier.windowInsetsPadding(
+            WindowInsets.statusBars.only(WindowInsetsSides.Top)
+        )
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Only show search if not in favorites view
+            if (!state.showingFavorites) {
+                SearchBar(
+                    query = state.searchQuery,
+                    onQueryChange = { query ->
+                        viewModel.updateSearchQuery(query)
+                        if (query.isEmpty()) {
+                            viewModel.clearSearch()
+                        }
+                    },
+                    onSearch = viewModel::searchBooks,
+                    onClearSearch = viewModel::clearSearch,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-        ) { selectedBook ->
-            if (selectedBook != null) {
-                println("DEBUG: Showing BookDetails for book: ${selectedBook.title}")
-                BookDetails(
-                    book = selectedBook,
-                    onBackPressed = {
-                        println("DEBUG: onBackPressed callback triggered from BookListScreen")
-                        viewModel.onClearSelectedBook()
-                    },
+
+            // If in favorites view, show favorites
+            if (state.showingFavorites) {
+                FavoritesGrid(
+                    books = favoriteBooks,
+                    onBookSelected = viewModel::onBookSelected,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    favoriteStatusMap = favoriteStatusMap,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = {
-                                Text(
-                                    text = "Bookpedia",
-                                    style = MaterialTheme.typography.h5.copy(
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            },
-                            backgroundColor = MaterialTheme.colors.surface,
-                            elevation = 4.dp,
-                            // No actions
-                        )
-                    },
-                    modifier = Modifier.windowInsetsPadding(
-                        WindowInsets.statusBars.only(WindowInsetsSides.Top)
+                // Regular search and browse view
+                AnimatedVisibility(
+                    visible = state.isSearching,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    SearchResults(
+                        books = state.searchResults,
+                        isLoading = state.isSearchLoading || state.isSearchLoadingMore,
+                        error = state.searchError,
+                        onBookClicked = viewModel::onBookSelected,
+                        onFavoriteToggle = viewModel::toggleFavorite,
+                        favoriteStatusMap = favoriteStatusMap,
+                        onLoadMore = viewModel::loadMoreSearchResults,
+                        modifier = Modifier.fillMaxSize()
                     )
-                ) { paddingValues ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                    ) {
-                            SearchBar(
-                                query = state.searchQuery,
-                                onQueryChange = { query ->
-                                    viewModel.updateSearchQuery(query)
-                                    if (query.isEmpty()) {
-                                        viewModel.clearSearch()
-                                    }
-                                },
-                                onSearch = viewModel::searchBooks,
-                                onClearSearch = viewModel::clearSearch,
-                                modifier = Modifier.fillMaxWidth()
+                }
+
+                AnimatedVisibility(
+                    visible = !state.isSearching,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column {
+                        TrendingTabs(
+                            selectedCategory = state.selectedCategory,
+                            onCategorySelected = viewModel::onCategorySelected,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Box(modifier = Modifier.weight(1f)) {
+                            BookGrid(
+                                books = state.books,
+                                isLoading = state.isLoading,
+                                isLoadingMore = state.isLoadingMore,
+                                error = state.error,
+                                onBookSelected = viewModel::onBookSelected,
+                                onFavoriteToggle = viewModel::toggleFavorite,
+                                favoriteStatusMap = favoriteStatusMap,
+                                onRefresh = { viewModel.fetchTrendingBooks(reset = true) },
+                                onLoadMore = viewModel::loadMoreTrendingBooks,
+                                modifier = Modifier.fillMaxSize()
                             )
-
-
-                        // Regular search and browse view
-                            AnimatedVisibility(
-                                visible = state.isSearching,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                SearchResults(
-                                    books = state.searchResults,
-                                    isLoading = state.isSearchLoading || state.isSearchLoadingMore,
-                                    error = state.searchError,
-                                    onBookClicked = viewModel::onBookSelected,
-                                    onLoadMore = viewModel::loadMoreSearchResults,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-
-                            AnimatedVisibility(
-                                visible = !state.isSearching,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                Column {
-                                    TrendingTabs(
-                                        selectedCategory = state.selectedCategory,
-                                        onCategorySelected = viewModel::onCategorySelected,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        BookGrid(
-                                            books = state.books,
-                                            isLoading = state.isLoading,
-                                            isLoadingMore = state.isLoadingMore,
-                                            error = state.error,
-                                            onBookSelected = viewModel::onBookSelected,
-                                            onRefresh = { viewModel.fetchTrendingBooks(reset = true) },
-                                            onLoadMore = viewModel::loadMoreTrendingBooks,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                }
-                            }
                         }
                     }
                 }
             }
         }
     }
+}
 
 
-// FavoritesGrid removed
+
+@Composable
+fun FavoritesGrid(
+    books: List<Book>,
+    onBookSelected: (Book) -> Unit,
+    onToggleFavorite: (Book) -> Unit,
+    favoriteStatusMap: Map<String, Boolean>,
+    modifier: Modifier = Modifier
+) {
+    if (books.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(48.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "No favorite books yet",
+                    style = MaterialTheme.typography.h6,
+                    color = Color.Gray
+                )
+            }
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = modifier
+        ) {
+            itemsIndexed(
+                items = books,
+                // Create a composite key that includes both book ID and index position
+                key = { index, book -> "${book.id}_favorite_$index" }
+            ) { _, book ->
+                BookGridItemWithFavorite(
+                    book = book,
+                    isFavorite = favoriteStatusMap[book.id] ?: false,
+                    onClick = { onBookSelected(book) },
+                    onFavoriteClick = { onToggleFavorite(book) }
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun BookGrid(
@@ -151,11 +230,13 @@ fun BookGrid(
     isLoadingMore: Boolean,
     error: AppError?,
     onBookSelected: (Book) -> Unit,
+    onFavoriteToggle: (Book) -> Unit,
+    favoriteStatusMap: Map<String, Boolean>,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val listState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val listState = rememberLazyGridState()
 
     // Detect when we need to load more items
     val loadMore = remember {
@@ -210,24 +291,28 @@ fun BookGrid(
             }
             else -> {
                LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                    columns = GridCells.Fixed(2),
                     state = listState,
                     contentPadding = PaddingValues(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    items(
+                    itemsIndexed(
                         items = books,
-                        key = { it.id }
-                    ) { book ->
-                        BookGridItem(
+                        // Create a composite key that includes both book ID and index position
+                        key = { index, book -> "${book.id}_grid_$index" }
+                    ) { _, book ->
+                        BookGridItemWithFavorite(
                             book = book,
-                            onClick = { onBookSelected(book) }
+                            isFavorite = favoriteStatusMap[book.id] ?: false,
+                            onClick = { onBookSelected(book) },
+                            onFavoriteClick = { onFavoriteToggle(book) }
                         )
                     }
 
                     if (isLoadingMore) {
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        item(span = { GridItemSpan(2) }) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -324,14 +409,16 @@ fun PullRefreshBox(
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun BookGridItem(
+fun BookGridItemWithFavorite(
     book: Book,
+    isFavorite: Boolean,
     onClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var visible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(book.id) {
+    LaunchedEffect(Unit) {
         visible = true
     }
 
@@ -394,6 +481,20 @@ fun BookGridItem(
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
                         )
                     }
+                }
+
+                // Favorite button
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .size(32.dp)
+                ) {
+                    BookmarkIcon(
+                        isFavorite = isFavorite,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }
